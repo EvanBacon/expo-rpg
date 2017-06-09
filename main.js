@@ -13,7 +13,13 @@ global.document = {};
 // THREE warns us about some GL extensions that `Expo.GLView` doesn't support
 // yet. This is ok, most things will still work, and we'll support those
 // extensions hopefully soon.
-console.disableYellowBox = true;
+// console.disableYellowBox = true;
+console.ignoredYellowBox = [
+  'THREE.WebGLRenderer',
+  'THREE.WebGLProgram',
+];
+
+import DPad from './DPad'
 
 class App extends React.Component {
 
@@ -21,10 +27,26 @@ class App extends React.Component {
     // Create an `Expo.GLView` covering the whole screen, tell it to call our
     // `_onGLContextCreate` function once it's initialized.
     return (
+      <View style={{flex: 1}}>
       <Expo.GLView
         style={{ flex: 1 }}
         onContextCreate={this._onGLContextCreate}
       />
+    <DPad       style={{position: 'absolute', bottom: 8, left: 8}}
+          onPressOut={ id => {
+            if (this.node) {
+              this.node.setSelectedSpriteKey(null)
+            }
+            this.selected = null
+
+          }}
+          onPress={id => {
+            if (this.node) {
+              this.node.setSelectedSpriteKey(id)
+            }
+            this.selected = id
+          }}/>
+  </View>
   );
 }
 
@@ -56,33 +78,54 @@ _onGLContextCreate = async (gl) => {
 
     camera.position.z = 1;
 
+    let textures = [
+      {key: "down",  texture: require('./assets/images/hero/0.png')},
+      {key: "left",  texture: require('./assets/images/hero/1.png')},
+      {key: "up",    texture: require('./assets/images/hero/2.png')},
+      {key: "right", texture: require('./assets/images/hero/3.png')},
+    ];
 
-    const sprite = new SpriteNode({
-      image: require('./assets/images/run.png'),
-      tilesHoriz: 10,
-      tilesVert: 1,
-      numTiles: 10,
-      tileDispDuration: 75,
-      position: {
-        x: -100,
-        y: 75,
-      },
-      size: {
-        width: 600,
-        height: 600
+    let sprites = {};
+
+    let keys = Object.keys(textures);
+    for (let i in keys) {
+
+      const {key, texture} = textures[i];
+
+      const size = {
+        width: 32 * 3,
+        height: 64 * 3
       }
-    });
-    await sprite.setup();
+      const sprite = new Sprite({
+        image: texture,
+        tilesHoriz: 6,
+        tilesVert: 1,
+        numTiles: 6,
+        tileDispDuration: 75,
+        position: {
+          x: 0,
+          y: 0
+        },
+        size
+      });
+      await sprite.setup();
+      scene.add(sprite.mesh);
+      sprites[key] = sprite;
+    }
 
-    scene.add(sprite.mesh);
+    this.node = new Node({
+      sprites
+    });
+
+
 
     const render = () => {
       requestAnimationFrame(render);
 
 
       var delta = clock.getDelta();
-      sprite.animation.update(1000 * delta);
-      sprite.mesh.rotation.z -= 1 * delta
+
+      this.node.update(delta);
 
       renderer.render(scene, camera);
 
@@ -96,10 +139,62 @@ _onGLContextCreate = async (gl) => {
 Expo.registerRootComponent(App);
 
 
-function SpriteNode({image, tilesHoriz, tilesVert, numTiles, tileDispDuration, filter = THREE.NearestFilter, size, position, ...props})
-{
+class Node {
+  constructor({sprites, selectedSpriteKey}) {
+    // console.warn(JSON.stringify(sprites))
 
-  this.setup = async () => {
+    Object.keys(sprites).map(val => sprites[val].mesh.visible = false);
+    this.sprites = sprites;
+
+    this.setSelectedSpriteKey(selectedSpriteKey || Object.keys(sprites)[0]);
+    this.setSelectedSpriteKey(null);
+  }
+
+  setSelectedSpriteKey = key => {
+    if (this.selectedSpriteKey != key) {
+
+      for (let _key of Object.keys(this.sprites)) {
+        let _sprite = this.sprites[_key];
+        if (_key == key) {
+          _sprite.mesh.visible = true;
+        } else {
+          _sprite.mesh.visible = false;
+        }
+      }
+
+      this.isAnimating = key;
+      const lastSprite = this.sprites[this.selectedSpriteKey];
+      if (lastSprite) {
+        lastSprite.mesh.visible = !this.isAnimating
+      }
+
+
+      // if (this.sprites.hasOwnProperty(key)) {
+      //   this.sprites[key].mesh.visible = true;
+      // }
+      this.selectedSpriteKey = key;
+    }
+  }
+
+  update = dt => {
+    if (this.selectedSpriteKey) {
+      if (this.sprites.hasOwnProperty(this.selectedSpriteKey)) {
+        this.sprites[this.selectedSpriteKey].animation.update(1000 * dt);
+      }
+    }
+  }
+
+}
+
+class Sprite {
+  constructor({image, tilesHoriz, tilesVert, numTiles, tileDispDuration, filter = THREE.NearestFilter, size, position, ...props}) {
+    let _props = {image, tilesHoriz, tilesVert, numTiles, tileDispDuration, filter, size, position, ...props};
+    Object.keys(_props).map(v=> this[v] = _props[v]);
+  }
+
+  setup = async () => {
+    const {image, tilesHoriz, tilesVert, numTiles, tileDispDuration, filter, size, position} = this;
+
     this.texture = await ExpoTHREE.createTextureAsync({
       asset: Expo.Asset.fromModule(image),
     });
@@ -112,38 +207,38 @@ function SpriteNode({image, tilesHoriz, tilesVert, numTiles, tileDispDuration, f
     });
     this.geometry = new THREE.PlaneGeometry(size.width, size.height, 1, 1);
     this.mesh = new THREE.Mesh(this.geometry, this.material);
-    this.mesh.position = {...position, z: 0};
 
+    this.mesh.position.x = position.x
+    this.mesh.position.y = position.y
   }
-
 
 
 }
 
-function TextureAnimator(texture, tilesHoriz, tilesVert, numTiles, tileDispDuration)
-{
-  // note: texture passed by reference, will be updated by the update function.
+class TextureAnimator {
+  constructor(texture, tilesHoriz, tilesVert, numTiles, tileDispDuration) {
+    // note: texture passed by reference, will be updated by the update function.
 
-  this.tilesHorizontal = tilesHoriz;
-  this.tilesVertical = tilesVert;
-  // how many images does this spritesheet contain?
-  //  usually equals tilesHoriz * tilesVert, but not necessarily,
-  //  if there at blank tiles at the bottom of the spritesheet.
-  this.numberOfTiles = numTiles;
-  // texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set( 1 / this.tilesHorizontal, 1 / this.tilesVertical );
+    this.tilesHorizontal = tilesHoriz;
+    this.tilesVertical = tilesVert;
+    // how many images does this spritesheet contain?
+    //  usually equals tilesHoriz * tilesVert, but not necessarily,
+    //  if there at blank tiles at the bottom of the spritesheet.
+    this.numberOfTiles = numTiles;
+    // texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set( 1 / this.tilesHorizontal, 1 / this.tilesVertical );
 
-  // how long should each image be displayed?
-  this.tileDisplayDuration = tileDispDuration;
+    // how long should each image be displayed?
+    this.tileDisplayDuration = tileDispDuration;
+    this.texture = texture;
+    // how long has the current image been displayed?
+    this.currentDisplayTime = 0;
 
-  // how long has the current image been displayed?
-  this.currentDisplayTime = 0;
+    // which image is currently being displayed?
+    this.currentTile = 0;
+  }
 
-  // which image is currently being displayed?
-  this.currentTile = 0;
-
-  this.update = function( milliSec )
-  {
+  update = milliSec => {
     this.currentDisplayTime += milliSec;
     while (this.currentDisplayTime > this.tileDisplayDuration)
     {
@@ -152,9 +247,9 @@ function TextureAnimator(texture, tilesHoriz, tilesVert, numTiles, tileDispDurat
       if (this.currentTile == this.numberOfTiles)
       this.currentTile = 0;
       var currentColumn = this.currentTile % this.tilesHorizontal;
-      texture.offset.x = currentColumn / this.tilesHorizontal;
+      this.texture.offset.x = currentColumn / this.tilesHorizontal;
       var currentRow = Math.floor( this.currentTile / this.tilesHorizontal );
-      texture.offset.y = currentRow / this.tilesVertical;
+      this.texture.offset.y = currentRow / this.tilesVertical;
     }
-  };
+  }
 }
