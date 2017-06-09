@@ -6,6 +6,7 @@
 /*
 Texture from: http://stemkoski.github.io/Three.js/Texture-Animation.html
 */
+import DirectionType from './DirectionType'
 
 import Expo from 'expo';
 import React from 'react';
@@ -25,7 +26,12 @@ console.ignoredYellowBox = [
 ];
 
 import DPad from './DPad'
-
+const defVelocity = {
+  [DirectionType.left]: {dx: -1},
+  [DirectionType.right]: {dx: 1},
+  [DirectionType.up]:   {dy: 1},
+  [DirectionType.down]: {dy: -1},
+}
 class App extends React.Component {
 
   render() {
@@ -41,6 +47,7 @@ class App extends React.Component {
           onPressOut={ id => {
             if (this.node) {
               this.node.setSelectedSpriteKey(null)
+              this.node.setVelocity()
             }
             this.selected = null
 
@@ -48,6 +55,7 @@ class App extends React.Component {
           onPress={id => {
             if (this.node) {
               this.node.setSelectedSpriteKey(id)
+              this.node.setVelocity(defVelocity[id])
             }
             this.selected = id
           }}/>
@@ -101,26 +109,25 @@ _onGLContextCreate = async (gl) => {
         width: 32 * 3,
         height: 64 * 3
       }
-      const sprite = new Sprite({
+      const sprite = new Sprite();
+      await sprite.setup({
         image: texture,
         tilesHoriz: 6,
         tilesVert: 1,
         numTiles: 6,
         tileDispDuration: 75,
-        position: {
-          x: 0,
-          y: 0
-        },
         size
       });
-      await sprite.setup();
-      scene.add(sprite.mesh);
       sprites[key] = sprite;
     }
 
-    this.node = new Node({
-      sprites
+    this.node = new Character({
+      sprites,
+      speed: 3
     });
+    scene.add(this.node);
+
+
 
 
 
@@ -143,12 +150,21 @@ _onGLContextCreate = async (gl) => {
 
 Expo.registerRootComponent(App);
 
+//
 
-class Node {
-  constructor({sprites, selectedSpriteKey}) {
-    // console.warn(JSON.stringify(sprites))
 
-    Object.keys(sprites).map(val => sprites[val].mesh.visible = false);
+class Node extends THREE.Group {
+  constructor({sprites, selectedSpriteKey, ...props}) {
+    super(props);
+
+
+    Object.keys(sprites).map(val => {
+      let _sprite = sprites[val];
+      if (_sprite instanceof THREE.Object3D) {
+        this.add(_sprite);
+      }
+      sprites[val].visible = false;
+    });
     this.sprites = sprites;
 
     this.setSelectedSpriteKey(selectedSpriteKey || Object.keys(sprites)[0]);
@@ -161,60 +177,71 @@ class Node {
       for (let _key of Object.keys(this.sprites)) {
         let _sprite = this.sprites[_key];
         if (_key == key) {
-          _sprite.mesh.visible = true;
+          _sprite.visible = true;
         } else {
-          _sprite.mesh.visible = false;
+          _sprite.visible = false;
         }
       }
 
       this.isAnimating = key;
       const lastSprite = this.sprites[this.selectedSpriteKey];
       if (lastSprite) {
-        lastSprite.mesh.visible = !this.isAnimating
+        lastSprite.visible = !this.isAnimating
       }
-
-
-      // if (this.sprites.hasOwnProperty(key)) {
-      //   this.sprites[key].mesh.visible = true;
-      // }
       this.selectedSpriteKey = key;
     }
   }
 
-  update = dt => {
+  getSelectedSprite = () => {
     if (this.selectedSpriteKey) {
       if (this.sprites.hasOwnProperty(this.selectedSpriteKey)) {
-        this.sprites[this.selectedSpriteKey].animation.update(1000 * dt);
+        return this.sprites[this.selectedSpriteKey];
       }
+    }
+  }
+
+  update(dt) {
+    let sprite = this.getSelectedSprite();
+    if (sprite) {
+      sprite.animation.update(1000 * dt);
     }
   }
 
 }
 
-class Sprite {
-  constructor({image, tilesHoriz, tilesVert, numTiles, tileDispDuration, filter = THREE.NearestFilter, size, position, ...props}) {
-    let _props = {image, tilesHoriz, tilesVert, numTiles, tileDispDuration, filter, size, position, ...props};
-    Object.keys(_props).map(v=> this[v] = _props[v]);
-  }
+class Sprite extends THREE.Mesh {
 
-  setup = async () => {
-    const {image, tilesHoriz, tilesVert, numTiles, tileDispDuration, filter, size, position} = this;
+  setup = async ({image, tilesHoriz, tilesVert, numTiles, tileDispDuration, filter = THREE.NearestFilter, size, position = {}, ...props}) => {
 
-    this.texture = await ExpoTHREE.createTextureAsync({
+    // Save props
+    let _props = {
+      image,
+      tilesHoriz,
+      tilesVert,
+      numTiles,
+      tileDispDuration,
+      filter,
+      size,
+      position,
+      ...props
+    };
+
+    Object.keys(_props).map(v=> this[`__${v}`] = _props[v]);
+
+
+    this._texture = await ExpoTHREE.createTextureAsync({
       asset: Expo.Asset.fromModule(image),
     });
     /// Preserve Pixel Texture - no smoothing
-    this.texture.magFilter = this.texture.minFilter = filter;
+    this._texture.magFilter = this._texture.minFilter = filter;
 
-    this.animation = new TextureAnimator( this.texture, tilesHoriz, tilesVert, numTiles, tileDispDuration ); // texture, #horiz, #vert, #total, duration.
+    this.animation = new TextureAnimator( this._texture, tilesHoriz, tilesVert, numTiles, tileDispDuration ); // texture, #horiz, #vert, #total, duration.
     this.material = new THREE.MeshBasicMaterial( {
-      map: this.texture,
+      map: this._texture,
     });
     this.geometry = new THREE.PlaneGeometry(size.width, size.height, 1, 1);
-    this.mesh = new THREE.Mesh(this.geometry, this.material);
-
-    this.mesh.position.x = position.x
-    this.mesh.position.y = position.y
+    this.position.x = position.x || 0
+    this.position.y = position.y || 0
   }
 
 
@@ -256,5 +283,33 @@ class TextureAnimator {
       var currentRow = Math.floor( this.currentTile / this.tilesHorizontal );
       this.texture.offset.y = currentRow / this.tilesVertical;
     }
+  }
+}
+
+
+class Character extends Node {
+  _dx = 0;
+  _dy = 0;
+  _speed = 0;
+  constructor({speed, ...props}) {
+    super(props);
+    this._speed = speed || 0;
+
+  }
+
+  setVelocity = (velocity) => {
+    velocity = velocity || {};
+    this._dx = velocity.dx || 0;
+    this._dy = velocity.dy || 0;
+  }
+
+  update = dt => {
+    super.update(dt);
+    this._updateVelocity();
+  }
+
+  _updateVelocity = () => {
+    this.position.x += this._dx * this._speed;
+    this.position.y += this._dy * this._speed;
   }
 }
