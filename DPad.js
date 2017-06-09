@@ -18,7 +18,7 @@ class Button extends React.PureComponent {
     const {style, onPress, id, onPressOut} = this.props
     return (
       <TouchableOpacity style={[style, {padding: 2}]} onPressOut={_=> onPressOut(id)} onPressIn={_=> {onPress(id)}}>
-        <View style={{width: size, height: size, backgroundColor: 'rgba(128, 128, 128, 0.6)', borderRadius: 3}}>
+        <View style={{width: size, height: size, backgroundColor: 'rgba(200, 200, 200, 0.7)', borderRadius: 3}}>
         </View>
       </TouchableOpacity>
     )
