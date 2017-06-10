@@ -124,6 +124,10 @@ class Game extends React.Component {
       // NOTE: How to create an `Expo.GLView`-compatible THREE renderer
       const renderer = ExpoTHREE.createRenderer({ gl });
       renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+      renderer.setClearColor(
+        0x000000,
+        0
+      );
 
       camera.position.z = 1;
 
