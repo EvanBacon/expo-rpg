@@ -5,19 +5,18 @@
 
 import Expo, {AppLoading} from 'expo';
 import React from 'react';
-import { StyleSheet, Image, Text, View } from 'react-native';
 import arrayFromObject from './utils/arrayFromObject'
 import cacheAssetsAsync from './utils/cacheAssetsAsync'
-const THREE = require('three');
-import ExpoTHREE from 'expo-three';
 import Images from './Images'
 import Game from './components/Game';
 
 class App extends React.Component {
   state = {appIsReady: false};
+
   componentWillMount() {
     this._loadAssetsAsync();
   }
+
   async _loadAssetsAsync() {
     try {
       await cacheAssetsAsync({
@@ -35,7 +34,7 @@ class App extends React.Component {
   }
 
   render() {
-      return this.state.appIsReady ? <Game /> : <AppLoading />
+    return this.state.appIsReady ? <Game /> : <AppLoading />
   }
 }
 Expo.registerRootComponent(App);
