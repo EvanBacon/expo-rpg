@@ -7,7 +7,6 @@
 Texture from: http://stemkoski.github.io/Three.js/Texture-Animation.html
 */
 import DirectionType from './DirectionType'
-
 import Expo, {AppLoading} from 'expo';
 import React from 'react';
 import { StyleSheet, Image, View } from 'react-native';
