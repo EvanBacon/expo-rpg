@@ -1,14 +1,7 @@
-//
-// Copyright (c) 2017-present, by Evan Bacon. All Rights Reserved.
-// @author Evan Bacon / https://github.com/EvanBacon
-//
-
-import Expo from 'expo';
-import React from 'react';
-const THREE = require('three');
+import * as THREE from "three"; // 0.88.0
 
 export default class Node extends THREE.Group {
-  constructor({sprites, selectedSpriteKey, ...props}) {
+  constructor({ sprites, selectedSpriteKey, ...props }) {
     super(props);
 
     Object.keys(sprites).map(val => {
@@ -26,7 +19,6 @@ export default class Node extends THREE.Group {
 
   setSelectedSpriteKey = key => {
     if (this.selectedSpriteKey != key) {
-
       for (let _key of Object.keys(this.sprites)) {
         let _sprite = this.sprites[_key];
         if (_key == key) {
@@ -39,11 +31,11 @@ export default class Node extends THREE.Group {
       this.isAnimating = key;
       const lastSprite = this.sprites[this.selectedSpriteKey];
       if (lastSprite) {
-        lastSprite.visible = !this.isAnimating
+        lastSprite.visible = !this.isAnimating;
       }
       this.selectedSpriteKey = key;
     }
-  }
+  };
 
   getSelectedSprite = () => {
     if (this.selectedSpriteKey) {
@@ -51,7 +43,7 @@ export default class Node extends THREE.Group {
         return this.sprites[this.selectedSpriteKey];
       }
     }
-  }
+  };
 
   update(dt) {
     let sprite = this.getSelectedSprite();

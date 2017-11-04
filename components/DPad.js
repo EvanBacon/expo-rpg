@@ -1,8 +1,3 @@
-//
-// Copyright (c) 2017-present, by Evan Bacon. All Rights Reserved.
-// @author Evan Bacon / https://github.com/EvanBacon
-//
-
 import React from 'react';
 import {
   StyleSheet,
@@ -17,7 +12,7 @@ class Button extends React.PureComponent {
     const size = 50 - 4
     const {style, onPress, id, onPressOut} = this.props
     return (
-      <TouchableOpacity style={[style, {padding: 2}]} onPressOut={_=> onPressOut(id)} onPressIn={_=> {onPress(id)}}>
+      <TouchableOpacity style={[style, {padding: 2}]} onPressOut={ () => onPressOut(id)} onPressIn={ () => {onPress(id)}}>
         <View style={{width: size, height: size, backgroundColor: 'rgba(200, 200, 200, 0.7)', borderRadius: 3}}>
         </View>
       </TouchableOpacity>

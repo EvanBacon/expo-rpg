@@ -1,13 +1,3 @@
-//
-// Copyright (c) 2017-present, by Evan Bacon. All Rights Reserved.
-// @author Evan Bacon / https://github.com/EvanBacon
-//
-
-import Expo from 'expo';
-import React from 'react';
-import { StyleSheet, Image, View } from 'react-native';
-const THREE = require('three');
-
 export default class TextureAnimator {
   constructor(texture, tilesHoriz, tilesVert, numTiles, tileDispDuration) {
     // note: texture passed by reference, will be updated by the update function.
@@ -18,8 +8,7 @@ export default class TextureAnimator {
     //  usually equals tilesHoriz * tilesVert, but not necessarily,
     //  if there at blank tiles at the bottom of the spritesheet.
     this.numberOfTiles = numTiles;
-    // texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set( 1 / this.tilesHorizontal, 1 / this.tilesVertical );
+    texture.repeat.set(1 / this.tilesHorizontal, 1 / this.tilesVertical);
 
     // how long should each image be displayed?
     this.tileDisplayDuration = tileDispDuration;
@@ -33,16 +22,14 @@ export default class TextureAnimator {
 
   update = milliSec => {
     this.currentDisplayTime += milliSec;
-    while (this.currentDisplayTime > this.tileDisplayDuration)
-    {
+    while (this.currentDisplayTime > this.tileDisplayDuration) {
       this.currentDisplayTime -= this.tileDisplayDuration;
       this.currentTile++;
-      if (this.currentTile == this.numberOfTiles)
-      this.currentTile = 0;
+      if (this.currentTile == this.numberOfTiles) this.currentTile = 0;
       var currentColumn = this.currentTile % this.tilesHorizontal;
       this.texture.offset.x = currentColumn / this.tilesHorizontal;
-      var currentRow = Math.floor( this.currentTile / this.tilesHorizontal );
+      var currentRow = Math.floor(this.currentTile / this.tilesHorizontal);
       this.texture.offset.y = currentRow / this.tilesVertical;
     }
-  }
+  };
 }

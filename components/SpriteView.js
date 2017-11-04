@@ -1,14 +1,9 @@
-//
-// Copyright (c) 2017-present, by Evan Bacon. All Rights Reserved.
-// @author Evan Bacon / https://github.com/EvanBacon
-//
-
-import Expo, {AppLoading} from 'expo';
-import React, {PropTypes} from 'react';
-import { StyleSheet, Image, PanResponder, Text, View } from 'react-native';
-const THREE = require('three');
-import ExpoTHREE from 'expo-three';
-
+import Expo from "expo";
+import React from "react";
+import PropTypes from "prop-types"; // 15.6.0
+import { StyleSheet, PanResponder } from "react-native";
+import * as THREE from "three"; // 0.88.0
+import ExpoTHREE from "expo-three"; // 2.0.2
 
 export default class SpriteView extends React.Component {
   static propTypes = {
@@ -16,20 +11,15 @@ export default class SpriteView extends React.Component {
     touchMoved: PropTypes.func.isRequired,
     touchUp: PropTypes.func.isRequired,
     update: PropTypes.func.isRequired,
-    onSetup: PropTypes.func.isRequired,
-  }
+    onSetup: PropTypes.func.isRequired
+  };
 
   static defaultProps = {
-    touchDown:({x, y}) => {
-    },
-    touchMoved:({x, y}) => {
-    },
-    touchUp: ({x, y}) => {
-    },
-    update: (currentTime) => {
-    },
-    onSetup: ({scene, camera}) => {
-    },
+    touchDown: ({ x, y }) => {},
+    touchMoved: ({ x, y }) => {},
+    touchUp: ({ x, y }) => {},
+    update: currentTime => {},
+    onSetup: ({ scene, camera }) => {}
   };
 
   scene;
@@ -41,46 +31,50 @@ export default class SpriteView extends React.Component {
   worldSpaceHeight = null; //1334
 
   constructor() {
-    super()
+    super();
     this.setupGestures();
   }
 
   setupGestures = () => {
-    const touchesBegan = ({nativeEvent}, gestureState) => {
-    const {touches} = nativeEvent;
-    touches.map( ({target, locationX, locationY, force, identifier, timestamp}) => {
-      this.props.touchDown({x: locationX, y: locationY})
-    })
-  }
+    const touchesBegan = ({ nativeEvent }, gestureState) => {
+      const { touches } = nativeEvent;
+      touches.map(
+        ({ target, locationX, locationY, force, identifier, timestamp }) => {
+          this.props.touchDown({ x: locationX, y: locationY });
+        }
+      );
+    };
 
-  const touchesMoved = ({nativeEvent}, gestureState) => {
-    const {touches} = nativeEvent;
-    touches.map( ({target, locationX, locationY, force, identifier, timestamp}) => {
-      this.props.touchMoved({x: locationX, y: locationY})
-    })
-  }
+    const touchesMoved = ({ nativeEvent }, gestureState) => {
+      const { touches } = nativeEvent;
+      touches.map(
+        ({ target, locationX, locationY, force, identifier, timestamp }) => {
+          this.props.touchMoved({ x: locationX, y: locationY });
+        }
+      );
+    };
 
-  const touchesEnded = ({nativeEvent}, gestureState) => {
-    const {touches} = nativeEvent;
-    touches.map( ({target, locationX, locationY, force, identifier, timestamp}) => {
-      this.props.touchUp({x: locationX, y: locationY})
-    })
-  }
+    const touchesEnded = ({ nativeEvent }, gestureState) => {
+      const { touches } = nativeEvent;
+      touches.map(
+        ({ target, locationX, locationY, force, identifier, timestamp }) => {
+          this.props.touchUp({ x: locationX, y: locationY });
+        }
+      );
+    };
 
-  this.panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderGrant: touchesBegan,
-    onPanResponderMove: touchesMoved,
-    onPanResponderRelease: touchesEnded,
-    onPanResponderTerminate: touchesEnded, //cancel
-    onShouldBlockNativeResponder: () => false,
-  });
-
-}
-
+    this.panResponder = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: touchesBegan,
+      onPanResponderMove: touchesMoved,
+      onPanResponderRelease: touchesEnded,
+      onPanResponderTerminate: touchesEnded, //cancel
+      onShouldBlockNativeResponder: () => false
+    });
+  };
 
   render() {
-    const {style, ...props} = this.props;
+    const { style, ...props } = this.props;
     // Create an `Expo.GLView` covering the whole screen, tell it to call our
     // `_onGLContextCreate` function once it's initialized.
     return (
@@ -92,13 +86,13 @@ export default class SpriteView extends React.Component {
     );
   }
 
-  _onGLContextCreate = async (gl) => {
+  _onGLContextCreate = async gl => {
     this.scene = new THREE.Scene();
     this.clock = new THREE.Clock();
 
     /// Camera
-    const {drawingBufferWidth: glWidth, drawingBufferHeight: glHeight} = gl;
-    this.worldSpaceHeight = (glHeight / glWidth) * this.worldSpaceWidth;
+    const { drawingBufferWidth: glWidth, drawingBufferHeight: glHeight } = gl;
+    this.worldSpaceHeight = glHeight / glWidth * this.worldSpaceWidth;
     this.camera = new THREE.OrthographicCamera(
       this.worldSpaceWidth / -2,
       this.worldSpaceWidth / 2,
@@ -109,14 +103,12 @@ export default class SpriteView extends React.Component {
     );
     this.camera.position.z = 1;
 
-
     const renderer = ExpoTHREE.createRenderer({ gl });
     renderer.setSize(glWidth, glHeight);
     /// Color, Alpha
-    renderer.setClearColor( 0x000000, 0 );
+    renderer.setClearColor(0x000000, 0);
 
-
-    await this.props.onSetup({scene: this.scene, camera: this.camera})
+    await this.props.onSetup({ scene: this.scene, camera: this.camera });
 
     const render = () => {
       requestAnimationFrame(render);
@@ -124,8 +116,8 @@ export default class SpriteView extends React.Component {
       this.props.update(delta);
       renderer.render(this.scene, this.camera);
       gl.endFrameEXP();
-    }
+    };
 
     render();
-  }
+  };
 }
